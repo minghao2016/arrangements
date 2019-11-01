@@ -8,12 +8,17 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: randy3k/github-action-rchk@master
+      with:
+        apt: libgmp3-dev
 
   ubsan:
     runs-on: ubuntu-latest
     container: rocker/r-devel-ubsan-clang
     steps:
     - uses: actions/checkout@v1
+    - name: Install gmp
+        apt-get update
+        apt-get install libgmp3-dev
     - name: Install dependencies
       run: |
         R --slave -e "install.packages(c('remotes', 'rcmdcheck'), repos = 'https://cloud.r-project.org')"
@@ -40,7 +45,7 @@ jobs:
     - name: Install apt-get dependencies
       run: |
         apt-get update
-        apt-get install git ssh curl bzip2 libffi6 libffi-dev -y
+        apt-get install git ssh curl bzip2 libffi6 libffi-dev libgmp3-dev -y
     - name: Install dependencies
       run: |
         R --slave -e "install.packages(c('remotes', 'rcmdcheck'), repos = 'https://cloud.r-project.org')"
@@ -77,6 +82,7 @@ jobs:
         sudo installer -pkg ~/R.pkg -target /
     - name: Install dependencies
       run: |
+        brew install gmp
         R --slave -e "install.packages(c('remotes', 'rcmdcheck'), repos = 'https://cloud.r-project.org', type = 'mac.binary.el-capitan')"
         R --slave -e "remotes::install_deps(dependencies = TRUE, type = 'mac.binary.el-capitan')"
       shell:
@@ -111,6 +117,13 @@ jobs:
         (new-object net.webclient).DownloadFile("https://cran.r-project.org/bin/windows/Rtools/Rtools35.exe","C:\Rtools35.exe")
       shell:
         pwsh
+    - name: Install gmp
+      run: |
+        (new-object net.webclient).DownloadFile("https://cs.nyu.edu/~exact/core/gmp/gmp-dynamic-mingw-4.1.tar.gz", "C:\gmp.tar.gz")
+        & tar -xzvf C:\gmp.tar.gz -C C:\
+        Get-ChildItem -path C:\gmp
+      shell:
+        pwsh
     - name: Install R
       run: |
         Start-Process -FilePath "C:\R-binary.exe" -Wait -ArgumentList "/VERYSILENT /DIR=C:\R"
@@ -125,7 +138,7 @@ jobs:
         pwsh
     - name: Running Tests
       run: |
-        C:\R\bin\R --slave -e "rcmdcheck::rcmdcheck(args = c('--as-cran', '--no-manual', '--timings'), error_on = 'warning')"
+        C:\R\bin\R --slave -e "rcmdcheck::rcmdcheck(args = c('--as-cran', '--no-manual', '--timings', build_args = c('CXXFLAG=\'-IC:\\gmp\\include -LC:\\gmp\\lib\'')), error_on = 'warning')"
       env:
         NOT_CRAN: true
       shell:
